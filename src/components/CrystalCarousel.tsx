@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import CrystalBottle from "./CrystalBottle";
 import { usePayment } from "./PaymentProvider";
+import { useCatalog } from "./CatalogProvider";
 import { crystalBottles, formatPrice } from "../data/site";
 
 export interface CarouselItem {
@@ -31,6 +32,8 @@ function CarouselCard({
   imageClassName: string;
 }) {
   const { openPayment } = usePayment();
+  const { getItem } = useCatalog();
+  const price = getItem(item.id)?.price ?? item.price;
 
   return (
     <button
@@ -39,7 +42,7 @@ function CarouselCard({
         openPayment({
           id: item.id,
           name: item.name,
-          price: item.price,
+          price,
           size: "50ml Eau de Parfum",
           image: item.image,
         })
@@ -61,7 +64,7 @@ function CarouselCard({
       </p>
       <div className="pointer-events-none absolute -bottom-7 translate-y-2 opacity-0 transition-all duration-500 group-hover/card:translate-y-0 group-hover/card:opacity-100 max-md:translate-y-0 max-md:opacity-100">
         <span className="whitespace-nowrap rounded-full border border-gold-300/40 bg-ocean-950/85 px-4 py-2 text-[13px] font-bold text-gold-gradient shadow-gold backdrop-blur-md">
-          {formatPrice(item.price)}
+          {formatPrice(price)}
         </span>
       </div>
       <span className="pointer-events-none absolute -bottom-16 translate-y-2 rounded-full border border-gold-300/50 bg-gold-300/10 px-4 py-2 text-[11px] font-bold tracking-[0.18em] text-gold-200 uppercase opacity-0 backdrop-blur-md transition-all duration-500 group-hover/card:translate-y-0 group-hover/card:opacity-100 max-md:hidden">

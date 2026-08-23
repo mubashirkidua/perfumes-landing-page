@@ -5,10 +5,9 @@ import { notFound } from "next/navigation";
 import Button from "@/components/Button";
 import PayButton from "@/components/PayButton";
 import { contactLinks, formatPrice, products } from "@/data/site";
+import { getCatalogItem } from "@/lib/catalog";
 
-export function generateStaticParams() {
-  return products.map((product) => ({ id: product.id }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -16,11 +15,11 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const product = products.find((p) => p.id === id);
+  const product = await getCatalogItem(id);
   if (!product) return {};
   return {
     title: `${product.name} — ${product.size}`,
-    description: product.description,
+    description: product.subtitle,
     alternates: { canonical: `/collection/${product.id}` },
   };
 }
@@ -49,8 +48,19 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = products.find((p) => p.id === id);
-  if (!product) notFound();
+  const live = await getCatalogItem(id);
+  if (!live) notFound();
+  const base = products.find((p) => p.id === id);
+  const product = {
+    id: live.id,
+    name: live.name,
+    price: live.price,
+    size: live.size,
+    image: live.image,
+    tagline: live.subtitle,
+    description: base?.description ?? live.subtitle,
+    notes: base?.notes ?? { top: [], heart: [], base: [] },
+  };
 
   const orderUrl = contactLinks.whatsapp(
     `Hello The Ocean Perfumes! I would like to order *${product.name}* (${product.size}) — ${formatPrice(
@@ -136,7 +146,7 @@ export default async function ProductDetailPage({
                   image: product.image,
                 }}
                 className="w-full py-4 text-sm"
-                label={`Pay ${formatPrice(product.price)} with Card`}
+                label={`Order ${formatPrice(product.price)}`}
               />
               <div className="grid grid-cols-2 gap-3.5">
                 <a

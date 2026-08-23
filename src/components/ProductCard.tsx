@@ -5,6 +5,7 @@ import Button from "./Button";
 import { contactLinks, formatPrice, type Product } from "../data/site";
 import { useTilt } from "../lib/useTilt";
 import { usePayment } from "./PaymentProvider";
+import { useCatalog } from "./CatalogProvider";
 import { cn } from "../lib/cn";
 
 const accentMap = {
@@ -34,9 +35,14 @@ export default function ProductCard({
   const { ref, onMouseMove, onMouseLeave } = useTilt<HTMLElement>(7);
   const accent = accentMap[product.accent];
   const { openPayment } = usePayment();
+  const { getItem } = useCatalog();
+  const live = getItem(product.id);
+  const price = live?.price ?? product.price;
+  const stock = live?.stock ?? 50;
+  const outOfStock = stock <= 0;
   const orderUrl = contactLinks.whatsapp(
     `Hello The Ocean Perfumes! I would like to order *${product.name}* (${product.size}) — ${formatPrice(
-      product.price
+      price
     )}.`
   );
 
@@ -55,6 +61,17 @@ export default function ProductCard({
         <span className="absolute left-4 top-4 z-20 rounded-full border bg-ocean-950/70 px-3.5 py-1.5 text-[10px] font-bold tracking-[0.22em] text-gold-300 uppercase backdrop-blur-sm">
           Eau de Parfum
         </span>
+        {outOfStock ? (
+          <span className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-full border border-red-400/50 bg-ocean-950/85 px-5 py-3 text-[11px] font-bold tracking-[0.18em] text-red-300 uppercase backdrop-blur-md">
+            Out of Stock
+          </span>
+        ) : (
+          stock <= 10 && (
+            <span className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-full border border-amber-400/40 bg-ocean-950/85 px-5 py-2 text-[10px] font-bold tracking-[0.18em] text-amber-300 uppercase backdrop-blur-md">
+              Only {stock} left
+            </span>
+          )
+        )}
         <button
           type="button"
           onClick={() => onQuickView(product)}
@@ -82,19 +99,20 @@ export default function ProductCard({
               openPayment({
                 id: product.id,
                 name: product.name,
-                price: product.price,
+                price,
                 size: product.size,
                 image: product.image,
               })
             }
             aria-label={`Complete payment for ${product.name}`}
-            className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-gold-300/50 bg-ocean-950/80 px-5 py-3 text-[11px] font-bold tracking-[0.18em] text-gold-200 uppercase opacity-0 shadow-[0_0_30px_-6px_rgba(214,179,106,0.5)] backdrop-blur-md transition-all duration-500 hover:border-gold-300 hover:bg-gold-300 hover:text-ocean-950 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:opacity-100 max-md:translate-y-0 max-md:opacity-100"
+            disabled={outOfStock}
+            className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-gold-300/50 bg-ocean-950/80 px-5 py-3 text-[11px] font-bold tracking-[0.18em] text-gold-200 uppercase opacity-0 shadow-[0_0_30px_-6px_rgba(214,179,106,0.5)] backdrop-blur-md transition-all duration-500 hover:border-gold-300 hover:bg-gold-300 hover:text-ocean-950 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:opacity-100 max-md:translate-y-0 max-md:opacity-100 disabled:cursor-not-allowed disabled:opacity-0"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
               <rect x="2.5" y="5.5" width="19" height="13" rx="3" />
               <path d="M2.5 10h19M6 15h4" strokeLinecap="round" />
             </svg>
-            Complete Payment
+            Order Now
           </button>
         </div>
       </div>
@@ -118,7 +136,7 @@ export default function ProductCard({
 
         <div className="mt-5 flex items-baseline gap-2">
           <span className="font-serif text-2xl font-semibold text-gold-gradient">
-            {formatPrice(product.price)}
+            {formatPrice(price)}
           </span>
           <span className="text-xs text-mist/80">/ 100ml</span>
         </div>

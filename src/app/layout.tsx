@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import StickyCTA from "@/components/StickyCTA";
 import OceanBackground from "@/components/OceanBackground";
 import PaymentProvider from "@/components/PaymentProvider";
+import CatalogProvider from "@/components/CatalogProvider";
 import { site } from "@/data/site";
 
 const playfair = Playfair_Display({
@@ -83,10 +84,12 @@ export default function RootLayout({
     <html lang="en" className={`${playfair.variable} ${manrope.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <OceanBackground intensity="subtle" />
-        <PaymentProvider>
-          <Navbar />
-          <main className="relative z-10 flex-1">{children}</main>
-        </PaymentProvider>
+        <CatalogProvider>
+          <PaymentProvider>
+            <Navbar />
+            <main className="relative z-10 flex-1">{children}</main>
+          </PaymentProvider>
+        </CatalogProvider>
         <Footer />
         <StickyCTA />
       </body>

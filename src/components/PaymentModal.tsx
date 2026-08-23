@@ -12,9 +12,12 @@ import {
 import { cn } from "../lib/cn";
 
 type Step = "pick" | "form" | "processing" | "success";
+type Method = "card" | "cod";
 
 type Errors = {
   name?: string;
+  phone?: string;
+  address?: string;
   card?: string;
   expiry?: string;
   cvc?: string;
@@ -46,6 +49,13 @@ const formatExpiry = (value: string) => {
   const d = value.replace(/\D/g, "").slice(0, 4);
   if (d.length <= 2) return d;
   return `${d.slice(0, 2)}/${d.slice(2)}`;
+};
+
+const formatPhone = (value: string) => {
+  let d = value.replace(/\D/g, "");
+  if (d.startsWith("0")) d = d.slice(1);
+  if (d.length > 10) d = d.slice(0, 10);
+  return d.length > 4 ? `${d.slice(0, 4)} ${d.slice(4)}` : d;
 };
 
 const detectBrand = (digits: string) => {
@@ -82,12 +92,16 @@ export default function PaymentModal({
 }) {
   const [step, setStep] = useState<Step>(item ? "form" : "pick");
   const [effective, setEffective] = useState<PaymentItem | null>(item);
+  const [method, setMethod] = useState<Method>("card");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [card, setCard] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvc, setCvc] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [orderId, setOrderId] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -103,29 +117,39 @@ export default function PaymentModal({
 
   const digits = card.replace(/\s/g, "");
   const brand = useMemo(() => detectBrand(digits), [digits]);
+  const total = (effective?.price ?? 0) * quantity;
 
   const validate = (): boolean => {
     const next: Errors = {};
-    if (name.trim().length < 3) next.name = "Enter the cardholder name.";
-    if (digits.length !== 16) {
-      next.card = "Enter a valid 16-digit card number.";
-    } else if (!luhn(digits)) {
-      next.card = "This card number looks invalid.";
-    }
-    const m = expiry.match(/^(\d{2})\/(\d{2})$/);
-    if (!m) {
-      next.expiry = "Use MM/YY.";
-    } else {
-      const month = Number(m[1]);
-      const year = 2000 + Number(m[2]);
-      const now = new Date();
-      if (month < 1 || month > 12) {
-        next.expiry = "Invalid month.";
-      } else if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
-        next.expiry = "Card has expired.";
+    if (name.trim().length < 3) next.name = "Enter your full name.";
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 10) next.phone = "Enter a valid phone number.";
+    if (method === "cod" && address.trim().length < 5)
+      next.address = "Enter your delivery address.";
+    if (method === "card") {
+      if (digits.length !== 16) {
+        next.card = "Enter a valid 16-digit card number.";
+      } else if (!luhn(digits)) {
+        next.card = "This card number looks invalid.";
       }
+      const m = expiry.match(/^(\d{2})\/(\d{2})$/);
+      if (!m) {
+        next.expiry = "Use MM/YY.";
+      } else {
+        const month = Number(m[1]);
+        const year = 2000 + Number(m[2]);
+        const now = new Date();
+        if (month < 1 || month > 12) {
+          next.expiry = "Invalid month.";
+        } else if (
+          year < now.getFullYear() ||
+          (year === now.getFullYear() && month < now.getMonth() + 1)
+        ) {
+          next.expiry = "Card has expired.";
+        }
+      }
+      if (cvc.replace(/\D/g, "").length < 3) next.cvc = "3-4 digits.";
     }
-    if (cvc.replace(/\D/g, "").length < 3) next.cvc = "3-4 digits.";
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -138,8 +162,15 @@ export default function PaymentModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          item: { id: effective.id, name: effective.name, price: effective.price },
-          last4: digits.slice(-4),
+          itemId: effective.id,
+          quantity,
+          paymentMethod: method,
+          customer: {
+            name,
+            phone,
+            address: method === "cod" ? address : undefined,
+          },
+          last4: method === "card" ? digits.slice(-4) : undefined,
         }),
       });
       const data = await res.json();
@@ -147,7 +178,7 @@ export default function PaymentModal({
         setOrderId(data.orderId);
         setStep("success");
       } else {
-        setErrors({ card: data.error || "Payment could not be processed." });
+        setErrors({ card: data.error || "Order could not be placed." });
         setStep("form");
       }
     } catch {
@@ -158,9 +189,11 @@ export default function PaymentModal({
 
   const confirmUrl = effective
     ? contactLinks.whatsapp(
-        `Hello The Ocean Perfumes! I just completed a card payment for *${effective.name}* (${formatPrice(
-          effective.price
-        )}). Order reference: ${orderId}. Please confirm my order.`
+        `Hello The Ocean Perfumes! I just placed an order for *${effective.name}* x${quantity} (${formatPrice(
+          total
+        )}) via ${method === "cod" ? "Cash on Delivery" : "Card payment"}. Order reference: ${orderId}. Please confirm my order.\n\nName: ${name}\nPhone: ${phone}${
+          address ? `\nAddress: ${address}` : ""
+        }`
       )
     : "#";
 
@@ -171,6 +204,8 @@ export default function PaymentModal({
         ? "border-red-400/70 focus:border-red-300"
         : "border-white/15 focus:border-gold-300/70 focus:shadow-[0_0_0_1px_rgba(214,179,106,0.4)]"
     );
+
+  const labelClass = "mb-1.5 block text-[11px] font-bold tracking-[0.18em] text-mist uppercase";
 
   return (
     <div
@@ -203,10 +238,29 @@ export default function PaymentModal({
                 <path d="M2.5 10h19M6 15h4" strokeLinecap="round" />
               </svg>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate font-serif text-xl text-pearl">{effective.name}</p>
               <p className="text-xs text-mist">{effective.size}</p>
               <p className="mt-1 font-serif text-lg text-gold-gradient">{formatPrice(effective.price)}</p>
+            </div>
+            <div className="flex items-center gap-1 rounded-full border border-white/15 bg-ocean-950/50 px-2 py-1">
+              <button
+                type="button"
+                aria-label="Decrease quantity"
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-mist transition hover:text-gold-300"
+              >
+                −
+              </button>
+              <span className="w-6 text-center text-sm font-semibold text-pearl">{quantity}</span>
+              <button
+                type="button"
+                aria-label="Increase quantity"
+                onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-mist transition hover:text-gold-300"
+              >
+                +
+              </button>
             </div>
           </div>
         )}
@@ -254,20 +308,42 @@ export default function PaymentModal({
               }}
               noValidate
             >
-              <p className="mb-5 flex items-center gap-2 text-[11px] font-bold tracking-[0.28em] text-mist uppercase">
-                <span className="h-1.5 w-1.5 rounded-full bg-gold-300" />
-                Card Details
-              </p>
+              <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-ocean-950/50 p-1.5">
+                <button
+                  type="button"
+                  onClick={() => setMethod("card")}
+                  className={cn(
+                    "rounded-xl px-3 py-2.5 text-[12px] font-bold tracking-[0.1em] uppercase transition",
+                    method === "card"
+                      ? "bg-gold-300/20 text-gold-200"
+                      : "text-mist hover:text-pearl"
+                  )}
+                >
+                  Card
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod("cod")}
+                  className={cn(
+                    "rounded-xl px-3 py-2.5 text-[12px] font-bold tracking-[0.1em] uppercase transition",
+                    method === "cod"
+                      ? "bg-gold-300/20 text-gold-200"
+                      : "text-mist hover:text-pearl"
+                  )}
+                >
+                  Cash on Delivery
+                </button>
+              </div>
 
               <div className="flex flex-col gap-4">
                 <div>
-                  <label htmlFor="pm-name" className="mb-1.5 block text-[11px] font-bold tracking-[0.18em] text-mist uppercase">
-                    Cardholder Name
+                  <label htmlFor="pm-name" className={labelClass}>
+                    Full Name
                   </label>
                   <input
                     id="pm-name"
                     type="text"
-                    autoComplete="cc-name"
+                    autoComplete="name"
                     autoFocus
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -278,79 +354,119 @@ export default function PaymentModal({
                 </div>
 
                 <div>
-                  <div className="mb-1.5 flex items-center justify-between">
-                    <label htmlFor="pm-card" className="block text-[11px] font-bold tracking-[0.18em] text-mist uppercase">
-                      Card Number
-                    </label>
-                    <span className="text-[11px] font-semibold text-gold-300">{brand || "Visa / Mastercard"}</span>
-                  </div>
+                  <label htmlFor="pm-phone" className={labelClass}>
+                    Phone Number
+                  </label>
                   <input
-                    id="pm-card"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="cc-number"
-                    value={card}
-                    onChange={(e) => setCard(formatCard(e.target.value))}
-                    placeholder="1234 5678 9012 3456"
-                    className={inputClass(errors.card)}
+                    id="pm-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    placeholder="3XX XXXX XXX"
+                    className={inputClass(errors.phone)}
                   />
-                  {errors.card && <p className="mt-1.5 text-xs text-red-300">{errors.card}</p>}
+                  {errors.phone && <p className="mt-1.5 text-xs text-red-300">{errors.phone}</p>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {method === "cod" && (
                   <div>
-                    <label htmlFor="pm-expiry" className="mb-1.5 block text-[11px] font-bold tracking-[0.18em] text-mist uppercase">
-                      Expiry
+                    <label htmlFor="pm-address" className={labelClass}>
+                      Delivery Address
                     </label>
-                    <input
-                      id="pm-expiry"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="cc-exp"
-                      value={expiry}
-                      onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                      placeholder="MM/YY"
-                      className={inputClass(errors.expiry)}
+                    <textarea
+                      id="pm-address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Street, area, city, landmark…"
+                      rows={2}
+                      className={cn(inputClass(errors.address), "resize-none")}
                     />
-                    {errors.expiry && <p className="mt-1.5 text-xs text-red-300">{errors.expiry}</p>}
+                    {errors.address && <p className="mt-1.5 text-xs text-red-300">{errors.address}</p>}
                   </div>
-                  <div>
-                    <label htmlFor="pm-cvc" className="mb-1.5 block text-[11px] font-bold tracking-[0.18em] text-mist uppercase">
-                      CVC
-                    </label>
-                    <input
-                      id="pm-cvc"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="cc-csc"
-                      value={cvc}
-                      onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                      placeholder="123"
-                      className={inputClass(errors.cvc)}
-                    />
-                    {errors.cvc && <p className="mt-1.5 text-xs text-red-300">{errors.cvc}</p>}
-                  </div>
-                </div>
+                )}
 
-                {errors.card && step === "form" && (
-                  <div className="flex items-center gap-2 rounded-xl border border-gold-300/30 bg-gold-300/10 px-4 py-3 text-xs text-gold-200">
-                    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <rect x="4" y="10" width="16" height="11" rx="2" />
-                      <path d="M8 10V7a4 4 0 0 1 8 0v3" strokeLinecap="round" />
-                    </svg>
-                    256-bit encrypted simulated transaction. No card data is stored.
-                  </div>
+                {method === "card" && (
+                  <>
+                    <div>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <label htmlFor="pm-card" className={labelClass}>
+                          Card Number
+                        </label>
+                        <span className="text-[11px] font-semibold text-gold-300">{brand || "Visa / Mastercard"}</span>
+                      </div>
+                      <input
+                        id="pm-card"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-number"
+                        value={card}
+                        onChange={(e) => setCard(formatCard(e.target.value))}
+                        placeholder="1234 5678 9012 3456"
+                        className={inputClass(errors.card)}
+                      />
+                      {errors.card && <p className="mt-1.5 text-xs text-red-300">{errors.card}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="pm-expiry" className={labelClass}>
+                          Expiry
+                        </label>
+                        <input
+                          id="pm-expiry"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                          value={expiry}
+                          onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                          placeholder="MM/YY"
+                          className={inputClass(errors.expiry)}
+                        />
+                        {errors.expiry && <p className="mt-1.5 text-xs text-red-300">{errors.expiry}</p>}
+                      </div>
+                      <div>
+                        <label htmlFor="pm-cvc" className={labelClass}>
+                          CVC
+                        </label>
+                        <input
+                          id="pm-cvc"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                          value={cvc}
+                          onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          placeholder="123"
+                          className={inputClass(errors.cvc)}
+                        />
+                        {errors.cvc && <p className="mt-1.5 text-xs text-red-300">{errors.cvc}</p>}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 rounded-xl border border-gold-300/30 bg-gold-300/10 px-4 py-3 text-xs text-gold-200">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <rect x="4" y="10" width="16" height="11" rx="2" />
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3" strokeLinecap="round" />
+                      </svg>
+                      Demo card transaction — no real payment is taken.
+                    </div>
+                  </>
                 )}
 
                 <button
                   type="submit"
                   className="button-gold hover:button-gold-hover mt-2 w-full rounded-full px-7 py-4 text-[13px] font-bold tracking-[0.16em] uppercase"
                 >
-                  Pay {formatPrice(effective.price)}
+                  {method === "cod"
+                    ? `Place Order — ${formatPrice(total)}`
+                    : `Pay ${formatPrice(total)}`}
                 </button>
 
                 <p className="mt-1 text-center text-[11px] leading-relaxed text-mist/70">
-                  Demo checkout — connect a live payment gateway (Stripe / JazzCash / EasyPaisa) for real transactions.
+                  {method === "cod"
+                    ? "Pay in cash when your order is delivered anywhere in Pakistan."
+                    : "Demo checkout — connect Stripe / JazzCash / EasyPaisa for real transactions."}
                 </p>
               </div>
             </form>
@@ -367,9 +483,13 @@ export default function PaymentModal({
                   </svg>
                 </div>
               </div>
-              <p className="mt-6 font-serif text-xl text-pearl">Processing payment…</p>
+              <p className="mt-6 font-serif text-xl text-pearl">
+                {method === "cod" ? "Placing your order…" : "Processing payment…"}
+              </p>
               <p className="mt-2 text-sm text-mist">
-                Securely authorising {formatPrice(effective.price)} for {effective.name}
+                {method === "cod"
+                  ? `Confirming ${effective.name} x${quantity} (${formatPrice(total)}) for delivery`
+                  : `Securely authorising ${formatPrice(total)} for ${effective.name}`}
               </p>
             </div>
           )}
@@ -381,9 +501,17 @@ export default function PaymentModal({
                   <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <p className="mt-6 font-serif text-2xl text-pearl">Payment Successful</p>
+              <p className="mt-6 font-serif text-2xl text-pearl">
+                {method === "cod" ? "Order Placed" : "Payment Successful"}
+              </p>
               <p className="mt-2 max-w-xs text-sm leading-relaxed text-mist">
-                Thank you! Your order for {effective.name} ({formatPrice(effective.price)}) has been confirmed.
+                {method === "cod"
+                  ? `Thank you ${name}! Your order for ${effective.name} x${quantity} (${formatPrice(
+                      total
+                    )}) will be delivered. We'll call you at ${phone} to confirm.`
+                  : `Thank you ${name}! Your order for ${effective.name} x${quantity} (${formatPrice(
+                      total
+                    )}) has been confirmed.`}
               </p>
               <div className="mt-5 rounded-2xl border border-white/10 bg-ocean-950/50 px-6 py-3">
                 <p className="text-[10px] font-bold tracking-[0.28em] text-mist uppercase">Order Reference</p>

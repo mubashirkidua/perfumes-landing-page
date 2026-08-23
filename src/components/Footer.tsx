@@ -110,6 +110,18 @@ export default function Footer() {
           <p className="text-center text-[12px] tracking-[0.18em] text-mist/70 uppercase">
             © {year} {site.name}. All rights reserved.
           </p>
+          <p className="mt-3 text-center">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-4 py-1.5 text-[11px] font-bold tracking-[0.2em] text-mist/70 uppercase transition-all duration-300 hover:border-gold-300/50 hover:text-gold-200"
+            >
+              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="4" y="10" width="16" height="10" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" strokeLinecap="round" />
+              </svg>
+              Admin Panel
+            </Link>
+          </p>
         </div>
       </div>
     </footer>

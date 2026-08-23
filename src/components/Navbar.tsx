@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import { usePayment } from "./PaymentProvider";
+import AdminAuthButton from "./AdminAuthButton";
 import { contactLinks, navLinks, site } from "../data/site";
 import { cn } from "../lib/cn";
 
@@ -74,6 +75,7 @@ export default function Navbar() {
         </ul>
 
         <div className="hidden items-center gap-4 lg:flex">
+          <AdminAuthButton />
           <button
             type="button"
             onClick={() => openPayment()}
@@ -156,6 +158,7 @@ export default function Navbar() {
           </ul>
 
           <div className="mt-auto space-y-3">
+            <AdminAuthButton className="w-full justify-center" />
             <Link
               href={contactLinks.whatsapp()}
               target="_blank"
