@@ -349,6 +349,11 @@ function OrdersTable({
                 >
                   {o.paymentMethod === "cod" ? "COD" : "Card"}
                 </span>
+                {o.transactionId && (
+                  <p className="mt-1 font-mono text-[11px] text-mist/70">
+                    {o.transactionId}
+                  </p>
+                )}
                 {o.last4 && (
                   <p className="mt-1 text-[11px] text-mist/70">
                     •••• {o.last4}

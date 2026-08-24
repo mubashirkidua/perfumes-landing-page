@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCatalogItem } from "@/lib/catalog";
-import { createOrder, deductStock, generateOrderId } from "@/lib/db";
+import {
+  createOrder,
+  deductStock,
+  generateOrderId,
+  restoreStock,
+} from "@/lib/db";
+import { processCardPayment } from "@/lib/payment-gateway";
 
 export const runtime = "nodejs";
 
@@ -81,8 +87,22 @@ export async function POST(req: Request) {
     );
   }
 
+  let transactionId: string | undefined;
   if (method === "card") {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const payment = await processCardPayment({
+      amount,
+      currency: "PKR",
+      orderId: generateOrderId(),
+      cardLast4: body.last4 ?? "",
+    });
+    if (!payment.success) {
+      await restoreStock(item.id, quantity);
+      return NextResponse.json(
+        { success: false, error: payment.error || "Payment could not be processed." },
+        { status: 400 }
+      );
+    }
+    transactionId = payment.transactionId;
   }
 
   const orderId = generateOrderId();
@@ -104,6 +124,7 @@ export async function POST(req: Request) {
     status: "pending",
     createdAt: new Date().toISOString(),
     last4: method === "card" ? body.last4 ?? undefined : undefined,
+    transactionId,
   });
 
   return NextResponse.json({

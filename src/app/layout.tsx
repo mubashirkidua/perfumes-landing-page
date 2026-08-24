@@ -22,8 +22,14 @@ const manrope = Manrope({
   display: "swap",
 });
 
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_VERCEL_URL ||
+  "http://localhost:3000"
+).replace(/\/$/, "");
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://theoceanperfumes.example.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: `${site.name} — Where Oceanic Freshness Meets Timeless Luxury`,
     template: `%s — ${site.name}`,

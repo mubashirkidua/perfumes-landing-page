@@ -12,16 +12,48 @@ A premium, production-ready luxury perfume brand website with a full ordering + 
 | `/ceo` | CEO profile — Muhammad Mubashir Ali, contact cards, luxury quote |
 | `/collection` | Sales landing — signature scents, rotating crystal collection, product cards, quick-view modal, contact section, mobile sticky CTA |
 | `/collection/[id]` | SEO-friendly product detail pages for each scent |
+| `/privacy-policy` | Privacy policy (brand placeholders — client should review) |
+| `/terms` | Terms & Conditions (brand placeholders — client should review) |
+| `/refund-shipping` | Refund & Shipping policy (brand placeholders — client should review) |
 | `/admin` | Admin dashboard — order management, stats, product price & stock editor (auth required) |
 | `/admin/login` | Admin sign-in page |
 
 ## Checkout & Orders
 
-- **Payment methods**: Card (simulated demo transaction) and **Cash on Delivery (COD)**
+- **Payment methods**: Card (via the payment gateway integration point — see below) and **Cash on Delivery (COD)**
 - **Customer info**: name, phone and delivery address (required for COD) are captured and stored
 - **Server-side pricing**: the amount is always calculated from the server catalog — a client-sent price is never trusted
 - **Stock management**: stock is deducted when an order is placed; out-of-stock / low-stock badges show on product cards, and orders are rejected when stock runs out
 - Orders persist to `data/db.json` (JSON file store, atomic writes, no external DB required)
+
+## Payment Gateway Integration (Client Task)
+
+Card payments currently complete through a clearly-marked **placeholder** in `src/lib/payment-gateway.ts`.
+
+The client must replace the body of the `processCardPayment` function with a real charge call. Everything else (order creation, stock deduction, admin display of transaction IDs) is already wired.
+
+```ts
+// src/lib/payment-gateway.ts
+export async function processCardPayment(input) {
+  // Replace this with a real gateway call, for example:
+  //
+  // Stripe:
+  //   const intent = await stripe.paymentIntents.create({
+  //     amount: input.amount * 100, // minor units (paise)
+  //     currency: "pkr",
+  //     metadata: { orderId: input.orderId },
+  //   });
+  //   return { success: true, transactionId: intent.id };
+  //
+  // JazzCash / EasyPaisa: HTTP POST the order to their API and
+  // return { success: true, transactionId: "<gateway-txn-id>" }.
+  //
+  // On failure return { success: false, error: "message" }.
+}
+```
+
+- Card details are never sent to or stored on this server — only the last 4 digits are kept for reference.
+- If a payment fails, the deducted stock is automatically restored and the customer sees a friendly error.
 
 ## Admin Panel
 
@@ -29,7 +61,7 @@ A premium, production-ready luxury perfume brand website with a full ordering + 
 | --- | --- |
 | **Login** | Session-cookie auth (HMAC-signed), one admin password via `ADMIN_PASSWORD` env |
 | **Stats** | Total orders, today's orders, revenue, pending / shipped / delivered counts |
-| **Orders** | View customer details, payment method, amounts; update status (pending → confirmed → shipped → delivered / cancelled) |
+| **Orders** | View customer details, payment method, transaction ID, amounts; update status (pending → confirmed → shipped → delivered / cancelled) |
 | **Products** | Edit price and stock inline for all 13 products; changes go live on the storefront instantly |
 
 Access via the **Sign In** button in the navbar, the **Admin Panel** link in the footer, or `/admin`.
@@ -38,9 +70,13 @@ Access via the **Sign In** button in the navbar, the **Admin Panel** link in the
 
 ```bash
 cp .env.example .env
-# set ADMIN_PASSWORD (default for local dev: ocean-admin-2026)
-# set ADMIN_SESSION_SECRET to a long random value in production
 ```
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Production site URL (no trailing slash) — used for SEO canonical/OG links |
+| `ADMIN_PASSWORD` | Admin panel login password (local default: `ocean-admin-2026`) |
+| `ADMIN_SESSION_SECRET` | HMAC secret for session cookies — set a long random value in production |
 
 ## API Routes
 
@@ -55,6 +91,15 @@ cp .env.example .env
 | `/api/admin/orders/[id]` | PATCH | ✓ | Update order status |
 | `/api/admin/stats` | GET | ✓ | Dashboard stats |
 | `/api/admin/products` | GET/PATCH | ✓ | List / edit products |
+
+## Go-Live Checklist (Client)
+
+1. **Payment gateway** — implement `processCardPayment` in `src/lib/payment-gateway.ts` (Stripe, JazzCash or EasyPaisa)
+2. **Site URL** — set `NEXT_PUBLIC_SITE_URL` to the production domain in `.env`
+3. **Admin security** — set a strong `ADMIN_PASSWORD` and a long random `ADMIN_SESSION_SECRET`
+4. **Brand content** — replace placeholder images in `public/images/` and finalise contact/address details in `src/data/site.ts`
+5. **Legal pages** — review `/privacy-policy`, `/terms` and `/refund-shipping` and adjust to your business reality
+6. **Data** — `data/db.json` is gitignored; back it up regularly in production
 
 ## Design System
 

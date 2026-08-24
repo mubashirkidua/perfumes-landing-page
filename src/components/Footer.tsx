@@ -107,10 +107,29 @@ export default function Footer() {
         </div>
 
         <div className="mt-14 border-t border-white/10 pt-7">
-          <p className="text-center text-[12px] tracking-[0.18em] text-mist/70 uppercase">
-            © {year} {site.name}. All rights reserved.
-          </p>
-          <p className="mt-3 text-center">
+          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <p className="text-[12px] tracking-[0.18em] text-mist/70 uppercase">
+              © {year} {site.name}. All rights reserved.
+            </p>
+            <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12px] tracking-[0.14em] text-mist/70 uppercase">
+              <li>
+                <Link href="/privacy-policy" className="transition-colors duration-300 hover:text-gold-200">
+                  Privacy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="transition-colors duration-300 hover:text-gold-200">
+                  Terms
+                </Link>
+              </li>
+              <li>
+                <Link href="/refund-shipping" className="transition-colors duration-300 hover:text-gold-200">
+                  Refunds & Shipping
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <p className="mt-5 text-center">
             <Link
               href="/admin"
               className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-4 py-1.5 text-[11px] font-bold tracking-[0.2em] text-mist/70 uppercase transition-all duration-300 hover:border-gold-300/50 hover:text-gold-200"

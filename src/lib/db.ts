@@ -31,6 +31,7 @@ export type Order = {
   status: OrderStatus;
   createdAt: string;
   last4?: string;
+  transactionId?: string;
 };
 
 export type ProductOverride = {
@@ -170,4 +171,13 @@ export async function deductStock(
   db.products[itemId] = { ...(db.products[itemId] ?? {}), stock };
   await writeDB(db);
   return { ok: true, stock };
+}
+
+export async function restoreStock(itemId: string, quantity: number) {
+  const db = await readDB();
+  const current = getStoredStock(db.products[itemId]);
+  const stock = current + quantity;
+  db.products[itemId] = { ...(db.products[itemId] ?? {}), stock };
+  await writeDB(db);
+  return stock;
 }

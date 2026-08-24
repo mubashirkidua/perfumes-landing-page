@@ -1,4 +1,4 @@
-import { crystalBottles, products, type Product } from "@/data/site";
+import { crystalBottles, products } from "@/data/site";
 import { getProductOverride, DEFAULT_STOCK } from "./db";
 
 export type CatalogItem = {
@@ -47,26 +47,4 @@ export async function getCatalog(): Promise<CatalogItem[]> {
 export async function getCatalogItem(id: string): Promise<CatalogItem | undefined> {
   const catalog = await getCatalog();
   return catalog.find((c) => c.id === id);
-}
-
-export function toPaymentItem(item: CatalogItem) {
-  return {
-    id: item.id,
-    name: item.name,
-    price: item.price,
-    size: item.size,
-    image: item.image,
-  };
-}
-
-export function productToCatalogItem(p: Product): CatalogItem {
-  return {
-    id: p.id,
-    name: p.name,
-    subtitle: p.tagline,
-    price: p.price,
-    size: p.size,
-    image: p.image,
-    stock: DEFAULT_STOCK,
-  };
 }
