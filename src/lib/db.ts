@@ -44,7 +44,9 @@ export type DBShape = {
   products: Record<string, ProductOverride>;
 };
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = process.env.VERCEL
+  ? path.join("/tmp", "ocean-perfumes-data")
+  : path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 
 let cache: DBShape | null = null;
@@ -74,11 +76,13 @@ export async function readDB(): Promise<DBShape> {
 }
 
 export async function writeDB(db: DBShape) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  const tmp = `${DB_FILE}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf-8");
-  await fs.rename(tmp, DB_FILE);
   cache = db;
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const tmp = `${DB_FILE}.tmp`;
+    await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf-8");
+    await fs.rename(tmp, DB_FILE);
+  } catch {}
 }
 
 export async function createOrder(order: Order): Promise<Order> {

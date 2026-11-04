@@ -8,6 +8,7 @@ import OceanBackground from "@/components/OceanBackground";
 import PaymentProvider from "@/components/PaymentProvider";
 import CatalogProvider from "@/components/CatalogProvider";
 import { site } from "@/data/site";
+import { resolveSiteUrl } from "@/lib/site-url";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -22,14 +23,16 @@ const manrope = Manrope({
   display: "swap",
 });
 
-const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_URL ||
-  "http://localhost:3000"
-).replace(/\/$/, "");
+function metadataBaseUrl(): URL {
+  try {
+    return new URL(resolveSiteUrl());
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  metadataBase: metadataBaseUrl(),
   title: {
     default: `${site.name} — Where Oceanic Freshness Meets Timeless Luxury`,
     template: `%s — ${site.name}`,
