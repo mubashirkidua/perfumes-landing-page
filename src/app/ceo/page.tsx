@@ -1,5 +1,5 @@
+
 import type { Metadata } from "next";
-import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import CTASection from "@/components/CTASection";
 import { contactLinks, site } from "@/data/site";
@@ -61,13 +61,18 @@ export default function CeoPage() {
               />
               <figure className="glass-deep relative overflow-hidden rounded-[36px] p-3 ring-gold animate-float-slow">
                 <div className="relative overflow-hidden rounded-[26px]">
-                  <Image
-                    src="/images/ceo.jpg"
+                  <img
+                    src="/ceo.jpg"
                     alt="Muhammad Mubashir Ali — CEO of The Ocean Perfumes"
                     width={800}
                     height={880}
-                    priority
-                    className="h-auto w-full object-cover"
+                    className="h-auto w-full object-cover object-top"
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      if (!target.src.endsWith('/images/ceo.jpg')) {
+                        target.src = '/images/ceo.jpg';
+                      }
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-ocean-950/60 via-transparent to-transparent" />
                   <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 bg-ocean-950/55 px-5 py-4 backdrop-blur-xl">
