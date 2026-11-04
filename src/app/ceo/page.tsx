@@ -1,14 +1,10 @@
 
-import type { Metadata } from "next";
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
 import Reveal from "@/components/Reveal";
 import CTASection from "@/components/CTASection";
 import { contactLinks, site } from "@/data/site";
-
-export const metadata: Metadata = {
-  title: "Our CEO — Muhammad Mubashir Ali",
-  description: `Meet ${site.name} CEO Muhammad Mubashir Ali — the visionary behind our premium ocean-inspired fragrances.`,
-  alternates: { canonical: "/ceo" },
-};
 
 const contactCards = [
   {
@@ -45,6 +41,39 @@ const contactCards = [
 ];
 
 export default function CeoPage() {
+  const [photoUrl, setPhotoUrl] = useState<string>("/ceo.jpg");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("ocean_perfumes_ceo_photo");
+      if (saved) {
+        setPhotoUrl(saved);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        if (base64) {
+          setPhotoUrl(base64);
+          try {
+            localStorage.setItem("ocean_perfumes_ceo_photo", base64);
+          } catch {
+            // quota limit
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <>
       <section className="relative px-5 pb-20 pt-32 sm:px-8 lg:pt-40 md:pb-28">
@@ -59,23 +88,51 @@ export default function CeoPage() {
                 aria-hidden="true"
                 className="absolute left-1/2 top-1/2 -z-10 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold-300/15 blur-[90px]"
               />
-              <figure className="glass-deep relative overflow-hidden rounded-[36px] p-3 ring-gold animate-float-slow">
+              <figure className="glass-deep relative overflow-hidden rounded-[36px] p-3 ring-gold animate-float-slow group">
                 <div className="relative overflow-hidden rounded-[26px]">
+                  {/* CEO Photo */}
                   <img
-                    src="/ceo.jpg"
+                    src={photoUrl}
                     alt="Muhammad Mubashir Ali — CEO of The Ocean Perfumes"
                     width={800}
                     height={880}
-                    className="h-auto w-full object-cover object-top"
+                    className="h-auto w-full object-cover object-top min-h-[380px] bg-slate-900"
                     onError={(e) => {
                       const target = e.currentTarget as HTMLImageElement;
-                      if (!target.src.endsWith('/images/ceo.jpg')) {
+                      if (!target.src.endsWith('/images/ceo.jpg') && !target.src.endsWith('ceo.jpg')) {
                         target.src = '/images/ceo.jpg';
                       }
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ocean-950/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 bg-ocean-950/55 px-5 py-4 backdrop-blur-xl">
+
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-ocean-950/80 via-transparent to-transparent pointer-events-none" />
+
+                  {/* Hidden Input for Selecting Photo */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+
+                  {/* Add / Change Photo Button */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute top-4 right-4 z-20 px-3.5 py-2 rounded-xl bg-slate-950/85 hover:bg-gold-500 border border-gold-300/50 text-gold-300 hover:text-slate-950 text-xs font-semibold flex items-center gap-2 shadow-xl backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                    title="Click karein aur apni device se CEO picture select karein"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>📷 Add / Change Photo</span>
+                  </button>
+
+                  {/* CEO Caption Banner */}
+                  <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 bg-ocean-950/65 px-5 py-4 backdrop-blur-xl pointer-events-none">
                     <p className="font-serif text-xl text-pearl">Muhammad Mubashir Ali</p>
                     <p className="mt-0.5 text-[11px] font-bold tracking-[0.3em] text-gold-300 uppercase">
                       Chief Executive Officer
